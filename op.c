@@ -3815,9 +3815,10 @@ newSUB(I32 floor, OP *o, OP *proto, OP *block)
     CvSTASH(cv) = PL_curstash;
 #ifdef USE_THREADS
     CvOWNER(cv) = 0;
-    if (!CvMUTEXP(cv))
+    if (!CvMUTEXP(cv)) {
 	New(666, CvMUTEXP(cv), 1, perl_mutex);
-    MUTEX_INIT(CvMUTEXP(cv));
+	MUTEX_INIT(CvMUTEXP(cv));
+    }
 #endif /* USE_THREADS */
 
     if (ps)
@@ -4031,8 +4032,10 @@ newXS(char *name, void (*subaddr) (CV * _CPERLproto), char *filename)
     }
     CvGV(cv) = (GV*)SvREFCNT_inc(gv);
 #ifdef USE_THREADS
-    New(666, CvMUTEXP(cv), 1, perl_mutex);
-    MUTEX_INIT(CvMUTEXP(cv));
+    if (!CvMUTEXP(cv)) {
+	New(666, CvMUTEXP(cv), 1, perl_mutex);
+	MUTEX_INIT(CvMUTEXP(cv));
+    }
     CvOWNER(cv) = 0;
 #endif /* USE_THREADS */
     CvFILEGV(cv) = gv_fetchfile(filename);

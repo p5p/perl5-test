@@ -48,7 +48,7 @@ static OP *too_few_arguments _((OP *o, char* name));
 static OP *too_many_arguments _((OP *o, char* name));
 static void null _((OP* o));
 static PADOFFSET pad_findlex _((char* name, PADOFFSET newoff, U32 seq,
-	CV* startcv, I32 cx_ix));
+	CV* startcv, I32 cx_ix, I32 saweval));
 static OP *newDEFSVOP _((void));
 static OP *new_logop _((I32 type, I32 flags, OP **firstp, OP **otherp));
 #endif
@@ -170,7 +170,7 @@ pad_allocmy(char *name)
 }
 
 STATIC PADOFFSET
-pad_findlex(char *name, PADOFFSET newoff, U32 seq, CV* startcv, I32 cx_ix)
+pad_findlex(char *name, PADOFFSET newoff, U32 seq, CV* startcv, I32 cx_ix, I32 saweval)
 {
     dTHR;
     CV *cv;
@@ -178,7 +178,6 @@ pad_findlex(char *name, PADOFFSET newoff, U32 seq, CV* startcv, I32 cx_ix)
     SV *sv;
     register I32 i;
     register PERL_CONTEXT *cx;
-    int saweval;
 
     for (cv = startcv; cv; cv = CvOUTSIDE(cv)) {
 	AV *curlist = CvPADLIST(cv);
@@ -231,14 +230,18 @@ pad_findlex(char *name, PADOFFSET newoff, U32 seq, CV* startcv, I32 cx_ix)
 			    CV *bcv;
 			    for (bcv = startcv;
 				 bcv && bcv != cv && !CvCLONE(bcv);
-				 bcv = CvOUTSIDE(bcv)) {
+				 bcv = CvOUTSIDE(bcv))
+			    {
 				if (CvANON(bcv))
 				    CvCLONE_on(bcv);
 				else {
-				    if (ckWARN(WARN_CLOSURE) && !CvUNIQUE(cv))
+				    if (ckWARN(WARN_CLOSURE)
+					&& !CvUNIQUE(bcv) && !CvUNIQUE(cv))
+				    {
 					warner(WARN_CLOSURE,
 					  "Variable \"%s\" may be unavailable",
 					     name);
+				    }
 				    break;
 				}
 			    }
@@ -261,20 +264,20 @@ pad_findlex(char *name, PADOFFSET newoff, U32 seq, CV* startcv, I32 cx_ix)
      * XXX This will also probably interact badly with eval tree caching.
      */
 
-    saweval = 0;
     for (i = cx_ix; i >= 0; i--) {
 	cx = &cxstack[i];
-	switch (cx->cx_type) {
+	switch (CxTYPE(cx)) {
 	default:
 	    if (i == 0 && saweval) {
 		seq = cxstack[saweval].blk_oldcop->cop_seq;
-		return pad_findlex(name, newoff, seq, PL_main_cv, 0);
+		return pad_findlex(name, newoff, seq, PL_main_cv, -1, saweval);
 	    }
 	    break;
 	case CXt_EVAL:
 	    switch (cx->blk_eval.old_op_type) {
 	    case OP_ENTEREVAL:
-		saweval = i;
+		if (CxREALEVAL(cx))
+		    saweval = i;
 		break;
 	    case OP_REQUIRE:
 		/* require must have its own scope */
@@ -290,7 +293,7 @@ pad_findlex(char *name, PADOFFSET newoff, U32 seq, CV* startcv, I32 cx_ix)
 		continue;
 	    }
 	    seq = cxstack[saweval].blk_oldcop->cop_seq;
-	    return pad_findlex(name, newoff, seq, cv, i-1);
+	    return pad_findlex(name, newoff, seq, cv, i-1, saweval);
 	}
     }
 
@@ -306,6 +309,7 @@ pad_findmy(char *name)
     SV *sv;
     SV **svp = AvARRAY(PL_comppad_name);
     U32 seq = PL_cop_seqmax;
+    PERL_CONTEXT *cx;
 
 #ifdef USE_THREADS
     /*
@@ -335,8 +339,16 @@ pad_findmy(char *name)
 	}
     }
 
+    /* Check if if we're in an eval'', and adjust seq to be the eval's
+     * seq number */
+    if (cxstack_ix >= 0) {
+	cx = &cxstack[cxstack_ix];
+	if (CxREALEVAL(cx))
+	    seq = cx->blk_oldcop->cop_seq;
+    }
+
     /* See if it's in a nested scope */
-    off = pad_findlex(name, 0, seq, CvOUTSIDE(PL_compcv), cxstack_ix);
+    off = pad_findlex(name, 0, seq, CvOUTSIDE(PL_compcv), cxstack_ix, 0);
     if (off) {
 	/* If there is a pending local definition, this new alias must die */
 	if (pendoff)
@@ -3588,7 +3600,7 @@ cv_clone2(CV *proto, CV *outside)
 	    char *name = SvPVX(namesv);    /* XXX */
 	    if (SvFLAGS(namesv) & SVf_FAKE) {   /* lexical from outside? */
 		I32 off = pad_findlex(name, ix, SvIVX(namesv),
-				      CvOUTSIDE(cv), cxstack_ix);
+				      CvOUTSIDE(cv), cxstack_ix, 0);
 		if (!off)
 		    PL_curpad[ix] = SvREFCNT_inc(ppad[ix]);
 		else if (off != ix)
@@ -3815,10 +3827,9 @@ newSUB(I32 floor, OP *o, OP *proto, OP *block)
     CvSTASH(cv) = PL_curstash;
 #ifdef USE_THREADS
     CvOWNER(cv) = 0;
-    if (!CvMUTEXP(cv)) {
+    if (!CvMUTEXP(cv))
 	New(666, CvMUTEXP(cv), 1, perl_mutex);
-	MUTEX_INIT(CvMUTEXP(cv));
-    }
+    MUTEX_INIT(CvMUTEXP(cv));
 #endif /* USE_THREADS */
 
     if (ps)
@@ -4032,10 +4043,8 @@ newXS(char *name, void (*subaddr) (CV * _CPERLproto), char *filename)
     }
     CvGV(cv) = (GV*)SvREFCNT_inc(gv);
 #ifdef USE_THREADS
-    if (!CvMUTEXP(cv)) {
-	New(666, CvMUTEXP(cv), 1, perl_mutex);
-	MUTEX_INIT(CvMUTEXP(cv));
-    }
+    New(666, CvMUTEXP(cv), 1, perl_mutex);
+    MUTEX_INIT(CvMUTEXP(cv));
     CvOWNER(cv) = 0;
 #endif /* USE_THREADS */
     CvFILEGV(cv) = gv_fetchfile(filename);

@@ -54,5 +54,3 @@ case "$archname" in
 esac
 
 archobjs=ebcdic.o
-
-echo 'cat >.$$.c; '"$cc"' -E -Wc,NOLOC ${1+"$@"} .$$.c; rm .$$.c' > cppstdin

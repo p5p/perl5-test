@@ -512,8 +512,8 @@ distclean:	clobber
 _mopup:
 	rm -f *$(OBJ_EXT) *$(LIB_EXT) all perlmain.c
 	rm -f perl.exp ext.libs
-	-rm -f perl.export perl.dll perl.libexp
-	-rm -f perl.map perl.def perl.loadmap miniperl.loadmap
+	-rm -f perl.export perl.dll perl.libexp perl.map perl.def
+	-rm -f perl.loadmap miniperl.loadmap perl.prelmap miniperl.prelmap
 	rm -f perl suidperl miniperl $(LIBPERL)
 
 # Do not 'make _tidy' directly.

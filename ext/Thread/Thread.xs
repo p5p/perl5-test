@@ -229,6 +229,15 @@ newthread (SV *startsv, AV *initargs, char *classname)
     static pthread_attr_t attr;
     static int attr_inited = 0;
     sigset_t fullmask, oldmask;
+#ifdef OLD_PTHREADS_API
+#ifdef __UNDETACHED
+    /* Some old pthreads implementations have
+     * pthread_attr_setdetachstate(pthread_attr_t*, int*).
+     * To get undetached (==joinable) state, some of these
+     * systems use __UNDETACHED. */
+    static int __undetached = __UNDETACHED;
+#endif
+#endif
 #endif
     
     savethread = thr;
@@ -264,14 +273,24 @@ newthread (SV *startsv, AV *initargs, char *classname)
 #ifdef OLD_PTHREADS_API
 #ifdef VMS
 /* This is available with the old pthreads API, but only with */
-/* DecThreads (VMS and Digital Unix) */
+/* DecThreads (VMS and Digital Unix (which has and uses the new one)) */
 	if (err == 0)
 	    err = pthread_attr_setdetach_np(&attr, ATTR_JOINABLE);
 #endif
-#else
+#else /* !defined(VMS) */
+#ifdef ATTR_JOINABLE
 	if (err == 0)
 	    err = pthread_attr_setdetachstate(&attr, ATTR_JOINABLE);
-#endif
+#else /* !defined(ATTR_JOINABLE) */
+#ifdef __UNDETACHED
+	if (err == 0)
+	    err = pthread_attr_setdetachstate(&attr, &__undetached);
+#else /* !defined(__UNDETACHED) */
+	croak("panic: can't pthread_attr_setdetachstate");
+#endif /* __UNDETACHED */
+#endif /* ATTR_JOINABLE */
+#endif /* VMS */
+#endif /* OLD_PTHREADS_API */
     }
     if (err == 0)
 #ifdef OLD_PTHREADS_API

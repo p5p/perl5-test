@@ -13,10 +13,6 @@
 #include <tchar.h>
 #ifdef __GNUC__
 #define Win32_Winsock
-#  ifdef __cplusplus
-#undef __attribute__		/* seems broken in 2.8.0 */
-#define __attribute__(p)
-#  endif
 #endif
 #include <windows.h>
 
@@ -946,13 +942,13 @@ win32_getenv(const char *name)
     }
     else
     {
-	/* allow any environment variables that begin with 'PERL5'
+	/* allow any environment variables that begin with 'PERL'
 	   to be stored in the registry
 	*/
 	if(curitem != NULL)
 	    *curitem = '\0';
 
-	if (strncmp(name, "PERL5", 5) == 0) {
+	if (strncmp(name, "PERL", 4) == 0) {
 	    if (curitem != NULL) {
 		Safefree(curitem);
 		curitem = NULL;
@@ -1166,14 +1162,20 @@ win32_alarm(unsigned int sec)
     return 0;
 }
 
+#if defined(HAVE_DES_FCRYPT) || defined(PERL_OBJECT)
 #ifdef HAVE_DES_FCRYPT
 extern char *	des_fcrypt(char *cbuf, const char *txt, const char *salt);
+#endif
 
 DllExport char *
 win32_crypt(const char *txt, const char *salt)
 {
+#ifdef HAVE_DES_FCRYPT
     dTHR;
     return des_fcrypt(crypt_buffer, txt, salt);
+#else
+    die("The crypt() function is unimplemented due to excessive paranoia.");
+#endif
 }
 #endif
 
@@ -2194,7 +2196,7 @@ XS(w32_DomainName)
 	char dname[256];
 	DWORD dnamelen = sizeof(dname);
 	SID_NAME_USE snu;
-	if (LookupAccountName(NULL, name, &sid, &sidlen,
+	if (LookupAccountName(NULL, name, (PSID)&sid, &sidlen,
 			      dname, &dnamelen, &snu)) {
 	    XSRETURN_PV(dname);		/* all that for this */
 	}

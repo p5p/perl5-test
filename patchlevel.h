@@ -1,6 +1,6 @@
 #ifndef __PATCHLEVEL_H_INCLUDED__
-#define PATCHLEVEL 4
-#define SUBVERSION 75
+#define PATCHLEVEL 5
+#define SUBVERSION 50
 
 /*
 	local_patches -- list of locally applied less-than-subversion patches.
@@ -39,8 +39,6 @@
  */
 static	char	*local_patches[] = {
 	NULL
-	,"DEVEL_BETA_ISSUE_1 - 5.005 Public Beta, Issue 1"
-	,"PL_ prefix on vars"
 	,NULL
 };
 

@@ -468,6 +468,10 @@ public:
     {
 	win32_abort();
     };
+    virtual char * Crypt(const char* clear, const char* salt)
+    {
+	return win32_crypt(clear, salt);
+    };
     virtual void Exit(int status)
     {
 	exit(status);
@@ -652,23 +656,39 @@ public:
     };
     virtual char* GetBase(PerlIO* pf, int &err)
     {
+#ifdef FILE_base
 	FILE *f = (FILE*)pf;
 	return FILE_base(f);
+#else
+	return Nullch;
+#endif
     };
     virtual int GetBufsiz(PerlIO* pf, int &err)
     {
+#ifdef FILE_bufsiz
 	FILE *f = (FILE*)pf;
 	return FILE_bufsiz(f);
+#else
+	return (-1);
+#endif
     };
     virtual int GetCnt(PerlIO* pf, int &err)
     {
+#ifdef USE_STDIO_PTR
 	FILE *f = (FILE*)pf;
 	return FILE_cnt(f);
+#else
+	return (-1);
+#endif
     };
     virtual char* GetPtr(PerlIO* pf, int &err)
     {
+#ifdef USE_STDIO_PTR
 	FILE *f = (FILE*)pf;
 	return FILE_ptr(f);
+#else
+	return Nullch;
+#endif
     };
     virtual char* Gets(PerlIO* pf, char* s, int n, int& err)
     {
@@ -738,14 +758,18 @@ public:
     };
     virtual void SetCnt(PerlIO* pf, int n, int &err)
     {
+#ifdef STDIO_CNT_LVALUE
 	FILE *f = (FILE*)pf;
 	FILE_cnt(f) = n;
+#endif
     };
     virtual void SetPtrCnt(PerlIO* pf, char * ptr, int n, int& err)
     {
+#ifdef STDIO_PTR_LVALUE
 	FILE *f = (FILE*)pf;
 	FILE_ptr(f) = ptr;
 	FILE_cnt(f) = n;
+#endif
     };
     virtual void Setlinebuf(PerlIO* pf, int &err)
     {

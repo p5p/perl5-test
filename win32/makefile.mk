@@ -29,7 +29,7 @@ INST_TOP	*= $(INST_DRV)\perl.gcc
 # versioned installation can be obtained by setting INST_TOP above to a
 # path that includes an arbitrary version string.
 #
-INST_VER	*= \5.00475
+INST_VER	*= \5.00550
 
 #
 # uncomment to enable threads-capabilities
@@ -57,11 +57,10 @@ CCTYPE		*= GCC
 CFG		*= Debug
 
 #
-# uncomment to enable linking with setargv.obj under the Visual C
-# compiler. Setting this options enables perl to expand wildcards in
-# arguments, but it may be harder to use alternate methods like
-# File::DosGlob that are more powerful.  This option is supported only with
-# Visual C.
+# uncomment to enable use of PerlCRT.DLL when using the Visual C compiler.
+# Highly recommended.  It has patches that fix known bugs in MSVCRT.DLL.
+# You will need to download it from: http://www.activestate.com/
+# and follow the directions in the package to install.
 #
 #USE_PERLCRT	*= define
 
@@ -77,7 +76,7 @@ CFG		*= Debug
 #
 # if you have the source for des_fcrypt(), uncomment this and make sure the
 # file exists (see README.win32).  File should be located in the same
-# directory as this file.  Not (yet) supported with PERL_OBJECT.
+# directory as this file.
 #
 #CRYPT_SRC	*= des_fcrypt.c
 
@@ -199,7 +198,7 @@ OPTIMIZE	= -O2 $(RUNTIME)
 LINK_DBG	= 
 .ENDIF
 
-CFLAGS		= -w -d -tWM -tWD $(INCLUDES) $(DEFINES) $(LOCDEFS) \
+CFLAGS		= -K -w -d -tWM -tWD $(INCLUDES) $(DEFINES) $(LOCDEFS) \
 		$(PCHFLAGS) $(OPTIMIZE)
 LINK_FLAGS	= $(LINK_DBG) -L$(CCLIBDIR) $(EXTRALIBDIRS:^"-L")
 OBJOUT_FLAG	= -o
@@ -227,8 +226,8 @@ SUBSYS		= console
 CXX_FLAG	= -xc++
 
 LIBC		= -lcrtdll
-LIBFILES	= $(CRYPT_LIB) -ladvapi32 -luser32 -lnetapi32 -lwsock32 -lmingw32 \
-		-lgcc -lmoldname $(LIBC) -lkernel32
+LIBFILES	= $(CRYPT_LIB) -ladvapi32 -luser32 -lnetapi32 -lwsock32 \
+		-lmingw32 -lgcc -lmoldname $(LIBC) -lkernel32
 
 .IF  "$(CFG)" == "Debug"
 OPTIMIZE	= -g -O2 $(RUNTIME) -DDEBUGGING
@@ -410,7 +409,11 @@ CFGH_TMPL	= config_H.bc
 
 CFGSH_TMPL	= config.gc
 CFGH_TMPL	= config_H.gc
-PERLIMPLIB	*= ..\libperl$(a)
+.IF "$(OBJECT)" == "-DPERL_OBJECT"
+PERLIMPLIB	= ..\libperlcore$(a)
+.ELSE
+PERLIMPLIB	= ..\libperl$(a)
+.ENDIF
 
 .ELSE
 
@@ -425,7 +428,7 @@ PERL95EXE	= ..\perl95.exe
 .IF "$(OBJECT)" == "-DPERL_OBJECT"
 PERLIMPLIB	*= ..\perlcore$(a)
 PERLDLL		= ..\perlcore.dll
-CAPILIB		= $(COREDIR)\PerlCAPI$(a)
+CAPILIB		= $(COREDIR)\perlCAPI$(a)
 .ELSE
 PERLIMPLIB	*= ..\perl$(a)
 PERLDLL		= ..\perl.dll
@@ -470,6 +473,7 @@ MICROCORE_SRC	=		\
 		..\taint.c	\
 		..\toke.c	\
 		..\universal.c	\
+		..\utf8.c	\
 		..\util.c
 
 .IF "$(PERL_MALLOC)" == "define"
@@ -543,6 +547,7 @@ CORE_NOCFG_H	=		\
 		..\sv.h		\
 		..\thread.h	\
 		..\unixish.h	\
+		..\utf8.h	\
 		..\util.h	\
 		..\XSUB.h	\
 		..\EXTERN.h	\
@@ -891,24 +896,24 @@ $(DYNALOADER).c: $(MINIPERL) $(EXTDIR)\DynaLoader\dl_win32.xs $(CONFIGPM)
 
 .IF "$(OBJECT)" == "-DPERL_OBJECT"
 
-PerlCAPI.cpp : $(MINIPERL)
+perlCAPI.cpp : $(MINIPERL)
 	$(MINIPERL) GenCAPI.pl $(COREDIR)
 
-PerlCAPI$(o) : PerlCAPI.cpp
+perlCAPI$(o) : perlCAPI.cpp
 .IF "$(CCTYPE)" == "BORLAND"
-	$(CC) $(CFLAGS_O) -c $(OBJOUT_FLAG)PerlCAPI$(o) PerlCAPI.cpp
+	$(CC) $(CFLAGS_O) -c $(OBJOUT_FLAG)perlCAPI$(o) perlCAPI.cpp
 .ELIF "$(CCTYPE)" == "GCC"
-	$(CC) $(CFLAGS_O) -c $(OBJOUT_FLAG)PerlCAPI$(o) PerlCAPI.cpp
+	$(CC) $(CFLAGS_O) -c $(OBJOUT_FLAG)perlCAPI$(o) perlCAPI.cpp
 .ELSE
 	$(CC) $(CFLAGS_O) $(RUNTIME) -UPERLDLL -c \
-	    $(OBJOUT_FLAG)PerlCAPI$(o) PerlCAPI.cpp
+	    $(OBJOUT_FLAG)perlCAPI$(o) perlCAPI.cpp
 .ENDIF
 
-$(CAPILIB) : PerlCAPI.cpp PerlCAPI$(o)
+$(CAPILIB) : perlCAPI.cpp perlCAPI$(o)
 .IF "$(CCTYPE)" == "BORLAND"
-	$(LIB32) $(LIBOUT_FLAG)$(CAPILIB) +PerlCAPI$(o)
+	$(LIB32) $(LIBOUT_FLAG)$(CAPILIB) +perlCAPI$(o)
 .ELSE
-	$(LIB32) $(LIBOUT_FLAG)$(CAPILIB) PerlCAPI$(o)
+	$(LIB32) $(LIBOUT_FLAG)$(CAPILIB) perlCAPI$(o)
 .ENDIF
 
 .ENDIF
@@ -1070,7 +1075,7 @@ clean :
 	-@erase $(MINIPERL)
 	-@erase perlglob$(o)
 	-@erase perlmain$(o)
-	-@erase PerlCAPI.cpp
+	-@erase perlCAPI.cpp
 	-@erase config.w32
 	-@erase /f config.h
 	-@erase $(GLOBEXE)

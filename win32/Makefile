@@ -25,7 +25,7 @@ INST_TOP	= $(INST_DRV)\perl
 # versioned installation can be obtained by setting INST_TOP above to a
 # path that includes an arbitrary version string.
 #
-INST_VER	= \5.00475
+INST_VER	= \5.00550
 
 #
 # uncomment to enable threads-capabilities
@@ -50,8 +50,8 @@ INST_VER	= \5.00475
 
 #
 # uncomment to enable use of PerlCRT.DLL when using the Visual C compiler.
-# Highly recommended.  It has patches that fix known bugs in MSCVRT.DLL.
-# You will need to download it from: http://www.activestate.com/<TBD>
+# Highly recommended.  It has patches that fix known bugs in MSVCRT.DLL.
+# You will need to download it from: http://www.activestate.com/
 # and follow the directions in the package to install.
 #
 #USE_PERLCRT	= define
@@ -68,7 +68,7 @@ INST_VER	= \5.00475
 #
 # if you have the source for des_fcrypt(), uncomment this and make sure the
 # file exists (see README.win32).  File should be located in the same
-# directory as this file.  Not (yet) supported with PERL_OBJECT.
+# directory as this file.
 #
 #CRYPT_SRC	= des_fcrypt.c
 
@@ -267,7 +267,7 @@ EXTUTILSDIR	= $(LIBDIR)\extutils
 !IF "$(OBJECT)" == "-DPERL_OBJECT"
 PERLIMPLIB	= ..\perlcore.lib
 PERLDLL		= ..\perlcore.dll
-CAPILIB		= $(COREDIR)\PerlCAPI.lib
+CAPILIB		= $(COREDIR)\perlCAPI.lib
 !ELSE
 PERLIMPLIB	= ..\perl.lib
 PERLDLL		= ..\perl.dll
@@ -354,6 +354,7 @@ MICROCORE_SRC	=		\
 		..\taint.c	\
 		..\toke.c	\
 		..\universal.c	\
+		..\utf8.c	\
 		..\util.c
 
 !IF "$(PERL_MALLOC)" == "define"
@@ -427,6 +428,7 @@ CORE_NOCFG_H	=		\
 		..\sv.h		\
 		..\thread.h	\
 		..\unixish.h	\
+		..\utf8.h	\
 		..\util.h	\
 		..\XSUB.h	\
 		..\EXTERN.h	\
@@ -724,15 +726,15 @@ $(DYNALOADER).c: $(MINIPERL) $(EXTDIR)\DynaLoader\dl_win32.xs $(CONFIGPM)
 	cd ..\..\win32
 
 !IF "$(OBJECT)" == "-DPERL_OBJECT"
-PerlCAPI.cpp : $(MINIPERL)
+perlCAPI.cpp : $(MINIPERL)
 	$(MINIPERL) GenCAPI.pl $(COREDIR)
 
-PerlCAPI$(o) : PerlCAPI.cpp
+perlCAPI$(o) : perlCAPI.cpp
 	$(CC) $(CFLAGS_O) $(RUNTIME) -UPERLDLL -c \
-	    $(OBJOUT_FLAG)PerlCAPI$(o) PerlCAPI.cpp
+	    $(OBJOUT_FLAG)perlCAPI$(o) perlCAPI.cpp
 
-$(CAPILIB) : PerlCAPI.cpp PerlCAPI$(o)
-	lib /OUT:$(CAPILIB) PerlCAPI$(o)
+$(CAPILIB) : perlCAPI.cpp perlCAPI$(o)
+	lib /OUT:$(CAPILIB) perlCAPI$(o)
 !ENDIF
 
 $(EXTDIR)\DynaLoader\dl_win32.xs: dl_win32.xs
@@ -912,7 +914,7 @@ clean :
 	-@erase perlmain$(o)
 	-@erase config.w32
 	-@erase /f config.h
-	-@erase PerlCAPI.cpp
+	-@erase perlCAPI.cpp
 	-@erase $(GLOBEXE)
 	-@erase $(PERLEXE)
 	-@erase $(PERLDLL)

@@ -75,11 +75,11 @@ pointer to the PERL_OBJECT. This pointer type is CPerlObj*. This is
 made transparent to extension developers by the following macros:
 	#define var pPerl->Perl_var
 	#define func pPerl->Perl_func
-	* these are done in ObjXSub.h
+	* these are done in objXSUB.h
 This requires that the extension be compiled as C++, which means
 that the code must be ANSI C and not K&R C. For K&R extensions,
 please see the C API notes located in Win32/GenCAPI.pl. This script
-creates a PerlCAPI.lib that provides a K & R compatible C interface
+creates a perlCAPI.lib that provides a K & R compatible C interface
 to the PERL_OBJECT.
 2. Local variables and functions cannot have the same name as perl's
 variables or functions since the macros will redefine these. Look for
@@ -111,9 +111,9 @@ class CPerlObj;
 #define PERL_OBJECT_THIS this
 #define _PERL_OBJECT_THIS ,this
 #define PERL_OBJECT_THIS_ this,
-#define CALLRUNOPS (this->*runops)
-#define CALLREGCOMP (this->*regcompp)
-#define CALLREGEXEC (this->*regexecp)
+#define CALLRUNOPS (this->*PL_runops)
+#define CALLREGCOMP (this->*PL_regcompp)
+#define CALLREGEXEC (this->*PL_regexecp)
 
 #else /* !PERL_OBJECT */
 
@@ -1259,6 +1259,7 @@ union any {
 #include "scope.h"
 #include "bytecode.h"
 #include "byterun.h"
+#include "utf8.h"
 
 /* Current curly descriptor */
 typedef struct curcur CURCUR;
@@ -1822,6 +1823,10 @@ typedef enum {
 				   stuffing into op->op_private */
 #define HINT_INTEGER		0x00000001
 #define HINT_STRICT_REFS	0x00000002
+/* #define HINT_notused4	0x00000004 */
+#define HINT_UTF8		0x00000008
+/* #define HINT_notused10	0x00000010 */
+				/* Note: 20,40,80 used for NATIVE_HINTS */
 
 #define HINT_BLOCK_SCOPE	0x00000100
 #define HINT_STRICT_SUBS	0x00000200

@@ -3,50 +3,38 @@
 #ifdef WIN32
 #  include <win32thread.h>
 #else
-
-#ifndef DJGPP
-/* POSIXish threads */
-#ifdef OLD_PTHREADS_API
-#  define pthread_mutexattr_init(a) pthread_mutexattr_create(a)
-#  define pthread_mutexattr_settype(a,t) pthread_mutexattr_setkind_np(a,t)
-#  define pthread_key_create(k,d) pthread_keycreate(k,(pthread_destructor_t)(d))
-#  define DETACH(t)				\
+#  if defined(OLD_PTHREADS_API) && !defined(DJGPP)
+     /* POSIXish threads */
+#    define pthread_mutexattr_init(a) pthread_mutexattr_create(a)
+#    define pthread_mutexattr_settype(a,t) pthread_mutexattr_setkind_np(a,t)
+#    define pthread_key_create(k,d) pthread_keycreate(k,(pthread_destructor_t)(d))
+#    define DETACH(t)				\
     STMT_START {				\
 	if (pthread_detach(&(t)->self)) {	\
 	    MUTEX_UNLOCK(&(t)->mutex);		\
 	    croak("panic: DETACH");		\
 	}					\
     } STMT_END
-#else
-#  define pthread_mutexattr_default NULL
-#  define pthread_condattr_default NULL
-#endif /* OLD_PTHREADS_API */
-#endif
-#endif
-
-#ifdef PTHREADS_CREATED_JOINABLE
-#  ifdef PTHREAD_CREATE_JOINABLE
-#    define ATTR_JOINABLE PTHREAD_CREATE_JOINABLE
-#  endif
-#else
-#  ifdef PTHREAD_CREATE_UNDETACHED
-#    ifdef PTHREAD_CREATE_UNDETAHCED
-#      define ATTR_JOINABLE PTHREAD_CREATE_UNDETACHED
-#    endif
 #  else
-#    ifdef PTHREAD_CREATE_JOINABLE
-#      define ATTR_JOINABLE PTHREAD_CREATE_JOINABLE
-#    endif
-#  endif
+#    define pthread_mutexattr_default NULL
+#    define pthread_condattr_default NULL
+#  endif /* OLD_PTHREADS_API */
 #endif
-/* In some systems with really far-out old pthreads API
- * the ATTR_JOINABLE may stay undefined even after the above.
- * One example is VM/ESA.  This is because they use
- * pthread_attr_setdetachstate(pthread_attr_t*, int*)
- * This case is taken care of in Thread.xs. */
 
 #ifndef YIELD
 #  define YIELD SCHED_YIELD
+#endif
+
+#ifdef PTHREAD_CREATE_JOINABLE
+#  define ATTR_JOINABLE PTHREAD_CREATE_JOINABLE
+#else
+#  ifdef PTHREAD_CREATE_UNDETACHED
+#    define ATTR_JOINABLE PTHREAD_CREATE_UNDETACHED
+#  else
+#    ifdef __UNDETACHED
+#      define ATTR_JOINABLE __UNDETACHED
+#    endif
+#  endif
 #endif
 
 #ifndef MUTEX_INIT

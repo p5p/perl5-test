@@ -229,17 +229,11 @@ newthread (SV *startsv, AV *initargs, char *classname)
     static pthread_attr_t attr;
     static int attr_inited = 0;
     sigset_t fullmask, oldmask;
-#ifdef OLD_PTHREADS_API
-#ifdef __UNDETACHED
-    /* Some old pthreads implementations have
-     * pthread_attr_setdetachstate(pthread_attr_t*, int*).
-     * To get undetached (==joinable) state, some of these
-     * systems use __UNDETACHED. */
-    static int __undetached = __UNDETACHED;
 #endif
-#endif
-#endif
-    
+#ifdef PTHREAD_SETDETACHSTATE_ARG2_POINTER
+    static int attr_joinable = ATTR_JOINABLE;
+#endif    
+
     savethread = thr;
     thr = new_struct_thread(thr);
     SPAGAIN;

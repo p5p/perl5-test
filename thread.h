@@ -10,7 +10,6 @@
 #  define pthread_mutexattr_init(a) pthread_mutexattr_create(a)
 #  define pthread_mutexattr_settype(a,t) pthread_mutexattr_setkind_np(a,t)
 #  define pthread_key_create(k,d) pthread_keycreate(k,(pthread_destructor_t)(d))
-#  define YIELD pthread_yield()
 #  define DETACH(t)				\
     STMT_START {				\
 	if (pthread_detach(&(t)->self)) {	\
@@ -26,23 +25,28 @@
 #endif
 
 #ifdef PTHREADS_CREATED_JOINABLE
-#  define ATTR_JOINABLE PTHREAD_CREATE_JOINABLE
-#else
-#  ifdef PTHREAD_CREATE_UNDETACHED
-#    define ATTR_JOINABLE PTHREAD_CREATE_UNDETACHED
-#  else
+#  ifdef PTHREAD_CREATE_JOINABLE
 #    define ATTR_JOINABLE PTHREAD_CREATE_JOINABLE
 #  endif
-#endif
-
-#ifndef YIELD
-#  ifdef HAS_SCHED_YIELD
-#    define YIELD sched_yield()
+#else
+#  ifdef PTHREAD_CREATE_UNDETACHED
+#    ifdef PTHREAD_CREATE_UNDETAHCED
+#      define ATTR_JOINABLE PTHREAD_CREATE_UNDETACHED
+#    endif
 #  else
-#    ifdef HAS_PTHREAD_YIELD
-#      define YIELD pthread_yield()
+#    ifdef PTHREAD_CREATE_JOINABLE
+#      define ATTR_JOINABLE PTHREAD_CREATE_JOINABLE
 #    endif
 #  endif
+#endif
+/* In some systems with really far-out old pthreads API
+ * the ATTR_JOINABLE may stay undefined even after the above.
+ * One example is VM/ESA.  This is because they use
+ * pthread_attr_setdetachstate(pthread_attr_t*, int*)
+ * This case is taken care of in Thread.xs. */
+
+#ifndef YIELD
+#  define YIELD SCHED_YIELD
 #endif
 
 #ifndef MUTEX_INIT

@@ -10,7 +10,7 @@
 # Set these to wherever you want "nmake install" to put your
 # newly built perl.
 INST_DRV	= c:
-INST_TOP	= $(INST_DRV)\perl5004.5x
+INST_TOP	= $(INST_DRV)\perl\5004.5x
 
 #
 # uncomment to enable threads-capabilities
@@ -22,7 +22,8 @@ INST_TOP	= $(INST_DRV)\perl5004.5x
 
 #
 # uncomment next line if you want to use the perl object
-OBJECT		= -DPERL_OBJECT
+# Currently, this cannot be enabled if you ask for threads above
+#OBJECT		= -DPERL_OBJECT
 
 #
 # uncomment next line if you want debug version of perl (big,slow)
@@ -44,7 +45,8 @@ OBJECT		= -DPERL_OBJECT
 # set this if you wish to use perl's malloc
 # WARNING: Turning this on/off WILL break binary compatibility with extensions
 # you may have compiled with/without it.  Be prepared to recompile all extensions
-# if you change the default.
+# if you change the default.  Currently, this cannot be enabled if you ask for
+# PERL_OBJECT above.
 #PERL_MALLOC	= define
 
 #
@@ -112,15 +114,8 @@ LIB32		= $(LINK32) -lib
 #
 # Options
 #
-!IF  "$(OBJECT)" == "-DPERL_OBJECT"
-RUNTIME		= -MT
-# XXX building with -MD fails many tests, but cannot investigate
-# because building with debug crashes compiler :-( GSAR )-:
-#RUNTIME	= -MD
-!ELSE
-RUNTIME		= -MD
-!ENDIF
 
+RUNTIME		= -MD
 INCLUDES	= -I.\include -I. -I..
 #PCHFLAGS	= -Fpc:\temp\vcmoduls.pch -YX 
 DEFINES		= -DWIN32 -D_CONSOLE $(BUILDOPT) $(CRYPT_FLAG)
@@ -143,9 +138,9 @@ OPTIMIZE	= -Od $(RUNTIME)d -Zi -D_DEBUG -DDEBUGGING
 LINK_DBG	= -debug -pdb:none
 !ELSE
 !  IF "$(CCTYPE)" == "MSVC20"
-OPTIMIZE	= -O2 $(RUNTIME) -DNDEBUG
+OPTIMIZE	= -Od $(RUNTIME) -DNDEBUG
 !  ELSE
-OPTIMIZE	= -O2 $(RUNTIME) -DNDEBUG
+OPTIMIZE	= -Od $(RUNTIME) -DNDEBUG
 !  ENDIF
 LINK_DBG	= -release
 !ENDIF
@@ -355,7 +350,7 @@ WIN32_OBJ	= $(WIN32_SRC:.c=.obj)
 MINICORE_OBJ	= $(CORE_OBJ:..\=.\mini\) $(MINIDIR)\miniperlmain$(o)
 MINIWIN32_OBJ	= $(WIN32_OBJ:.\=.\mini\)
 MINI_OBJ	= $(MINICORE_OBJ) $(MINIWIN32_OBJ)
-PERL95_OBJ	= $(PERL95_SRC:.c=.obj) DynaLoadmt$(o)
+PERL95_OBJ	= $(PERL95_SRC:.c=.obj)
 DLL_OBJ		= $(DLL_SRC:.c=.obj)
 X2P_OBJ		= $(X2P_SRC:.c=.obj)
 
@@ -370,6 +365,7 @@ PERLEXE_OBJ	= perlmain$(o)
 PERLDLL_OBJ	= $(PERLDLL_OBJ) $(WIN32_OBJ) $(DLL_OBJ)
 !ELSE
 PERLEXE_OBJ	= $(PERLEXE_OBJ) $(WIN32_OBJ) $(DLL_OBJ)
+PERL95_OBJ	= $(PERL95_OBJ) DynaLoadmt$(o)
 !ENDIF
 
 DYNAMIC_EXT	= Socket IO Fcntl Opcode SDBM_File POSIX attrs Thread B
@@ -415,8 +411,13 @@ EXTENSION_DLL	= 		\
 		$(IO_DLL)	\
 		$(POSIX_DLL)	\
 		$(ATTRS_DLL)
-#		$(THREAD_DLL)	\
-#		$(B_DLL)
+
+!IF "$(OBJECT)" == ""
+EXTENSION_DLL	= 		\
+		$(EXTENSION_DLL)\
+		$(THREAD_DLL)	\
+		$(B_DLL)
+!ENDIF
 
 POD2HTML	= $(PODDIR)\pod2html
 POD2MAN		= $(PODDIR)\pod2man

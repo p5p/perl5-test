@@ -382,19 +382,22 @@ sub test_store {
 
   my $class = tied %$hash;
 
-  my %h1 = @$defaults;
-  my %h2 = @$defaults;
+  # It's important to do this with nice new hashes created each time round
+  # the loop, rather than hashes in the pad, which get recycled, and may have
+  # xhv_array non-NULL
+  my $h1 = {@$defaults};
+  my $h2 = {@$defaults};
   if (defined $class) {
-    tie %h1, ref $class;
-    tie %h2, ref $class;
+    tie %$h1, ref $class;
+    tie %$h2, ref $class;
     $HV_STORE_IS_CRAZY = undef;
   }
-  is (XS::APItest::Hash::store_ent(\%h1, $key, 1), $HV_STORE_IS_CRAZY,
-      "hv_store_ent$message $printable"); 
-  ok (brute_force_exists (\%h1, $key), "hv_store_ent$message $printable");
-  is (XS::APItest::Hash::store(\%h2, $key,  1), $HV_STORE_IS_CRAZY,
+  is (XS::APItest::Hash::store_ent($h1, $key, 1), $HV_STORE_IS_CRAZY,
+      "hv_store_ent$message $printable");
+  ok (brute_force_exists ($h1, $key), "hv_store_ent$message $printable");
+  is (XS::APItest::Hash::store($h2, $key,  1), $HV_STORE_IS_CRAZY,
       "hv_store$message $printable");
-  ok (brute_force_exists (\%h2, $key), "hv_store$message $printable");
+  ok (brute_force_exists ($h2, $key), "hv_store$message $printable");
 }
 
 sub test_fetch_present {

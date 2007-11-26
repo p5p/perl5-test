@@ -404,6 +404,8 @@ fetch(hash, key_sv)
         OUTPUT:
         RETVAL
 
+#if defined (hv_common)
+
 SV *
 common(params)
 	INPUT:
@@ -449,6 +451,8 @@ common(params)
         OUTPUT:
         RETVAL
 
+#endif
+
 void
 test_hv_free_ent()
 	PPCODE:
@@ -479,6 +483,8 @@ test_share_unshare_pvn(input)
 	OUTPUT:
 	RETVAL
 
+#if PERL_VERSION >= 9
+
 bool
 refcounted_he_exists(key, level=0)
 	SV *key
@@ -492,7 +498,6 @@ refcounted_he_exists(key, level=0)
 		  != &PL_sv_placeholder);
 	OUTPUT:
 	RETVAL
-
 
 SV *
 refcounted_he_fetch(key, level=0)
@@ -508,6 +513,7 @@ refcounted_he_fetch(key, level=0)
 	OUTPUT:
 	RETVAL
 	
+#endif
 	
 =pod
 

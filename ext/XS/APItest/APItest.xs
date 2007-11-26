@@ -30,14 +30,17 @@ my_cxt_setint_p(pMY_CXT_ int i)
 }
 
 SV*
-my_cxt_getsv_interp(void)
+my_cxt_getsv_interp_context(void)
 {
-#ifdef PERL_IMPLICIT_CONTEXT
     dTHX;
     dMY_CXT_INTERP(my_perl);
-#else
+    return MY_CXT.sv;
+}
+
+SV*
+my_cxt_getsv_interp(void)
+{
     dMY_CXT;
-#endif
     return MY_CXT.sv;
 }
 
@@ -787,10 +790,11 @@ my_cxt_setint(i)
 	my_cxt_setint_p(aMY_CXT_ i);
 
 void
-my_cxt_getsv()
+my_cxt_getsv(how)
+    bool how;
     PPCODE:
 	EXTEND(SP, 1);
-	ST(0) = my_cxt_getsv_interp();
+	ST(0) = how ? my_cxt_getsv_interp_context() : my_cxt_getsv_interp();
 	XSRETURN(1);
 
 void

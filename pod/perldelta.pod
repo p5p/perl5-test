@@ -27,6 +27,13 @@ here, but most should go in the L</Performance Enhancements> section.
 
 [ List each enhancement as a =head2 entry ]
 
+=head2 C<sub>s now take a C<prototype> attribute
+
+When declaring or defining a C<sub>, the prototype can now be specified
+inside of a C<prototype> attribute instead of in parens following the name.
+
+For example, C<sub foo($$){}> could be rewritten as C<sub foo : prototype($$){}>
+
 =head1 Security
 
 XXX Any security-related notices go here.  In particular, any security
@@ -119,6 +126,12 @@ XXX
 =head2 Updated Modules and Pragmata
 
 =over 4
+
+=item *
+
+L<attributes> has been upgraded from version 0.21 to 0.22
+
+Added support for the C<prototype> attribute.
 
 =item *
 
